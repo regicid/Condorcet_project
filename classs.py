@@ -7,32 +7,32 @@ import multiprocessing as mtp
 from tqdm import tqdm_notebook as tqdm
 
 class CurtyMarsili(object):
-    def __init__(self,z=0,z2 = 0,z3=0,a = 1, N=5000, p=0.52, m=11,γ = 0.05,γ2 = .05,σ_mut = 10**-8,α_dandy = 1,n = 100,Ω = 1,c = .01,selection_force=2,raoult=True,tqdm=False,T = 100000,true_score=True):
-        #set the parameters
-        self.true_score = true_score
-        self.T = T
-        self.tqdm = tqdm
-        self.γ2 = γ2
-        self.raoult = raoult
-        self.N_f = int(np.round(N*z))
-        self.N_α = int(np.round(N*z2))
-        self.N = N
+    def __init__(self,z=0,z2 = 0,z3=0,a = 1, N=5000, p=0.52, m=11,γ = 0.05,γ2 = .05,σ = 10**-8,α_dandy = 1,n = 100,ω = 1,c = .01,selection_force=2,raoult=True,tqdm=False,T = 100000):
+        #z is the initial proportion of followers (idem z2 -> proportion of dandys, z3 -> proportion of anti-conformists)
+        self.N = N # Number of players
+        self.ω = ω #Inventive to gather in-degrees
+        self.p = p #Informed accuracy
+        self.T = T #Number of iterations in the imitation phase
+        self.tqdm = tqdm # Boolean, wether to use tqdm
+        self.γ2 = γ2 #Accuracy update speed
+        self.raoult = raoult #Wether to allow anti-conformists strategies
+        self.m = m #Number of agents a follower listens to
+        self.a = a #Incompressible probability to be chosen 
+        self.c = c #Information searching fitness cost
+        self.n = n #Computationnal stuff to speed things
+        self.selection_force = selection_force #Number of birth/deaths at each time step
+        self.σ = σ #Mutation rate
+        self.γ = γ # Network update speed
+        self.α_dandy = α_dandy # Originality's weighting for dandies
+        self.N_f = int(np.round(N*z)) #Array recording what agents are follower
+        self.N_α = int(np.round(N*z2)) #Idem for dandies
+        self.anti_conformist = np.zeros(self.N,dtype="bool") #Idem for anti-conformists
         self.follower = np.zeros(self.N,dtype="bool")
         self.follower[:self.N_f] = True
         self.α = np.zeros(self.N,dtype='bool')
         self.α[:self.N_α] = True
-        self.anti_conformist = np.zeros(self.N,dtype="bool")
         b = np.random.random(size=self.N)
         self.anti_conformist[b<z3] = True
-        self.Ω = Ω
-        self.p = p
-        self.m = m
-        self.a = a
-        self.c = c
-        self.n = n
-        self.selection_force = selection_force
-        self.σ_mut = σ_mut
-        self.γ = γ # Memory loss of partner's performance
         self.network = np.empty(shape = (self.N,m),dtype = "int16")
         self.network_scores = np.zeros(shape = (self.N,m))
         for i in range(self.N):
@@ -40,14 +40,11 @@ class CurtyMarsili(object):
         self.D = np.empty(N)
         self.D[self.follower] = np.random.choice([-1,1],p = [0.5, 0.5],size = self.follower.sum())
         self.D[~self.follower] = np.random.choice([-1,1],p = [1-p,p],size = N - self.follower.sum())
-        self.q = []
-        self.prop_i = []
-        self.prop_lazy = []
-        self.α_dandy = α_dandy
+        self.prop_i = [] #Records the informed audience share
         in_deg = np.zeros(self.N,dtype="int")
         a = np.unique(self.network,return_counts=True)
         in_deg[a[0]] = a[1]
-        self.N_f = [self.N_f]
+        self.N_f = [self.N_f] # Records the number of followers throughout time
         self.α_history = []
         self.f_history = []
         self.anti_history = []
@@ -102,19 +99,16 @@ class CurtyMarsili(object):
                 p2 = p2/p2.sum()
                 new = np.random.choice(not_listened,p = p2)
                 self.network[I,weakest_link[i]] = new
-                if self.true_score:
-                        self.network_scores[I,weakest_link[i]] = self.network_scores[self.network==new].mean()
-                else:
-                        self.network_scores[I,weakest_link[i]] = self.network_scores[I,].mean()
+                self.network_scores[I,weakest_link[i]] = self.network_scores[I,].mean()
             b = np.random.random(size=self.N)
-            self.α[b<self.σ_mut] = 1 - self.α[b<self.σ_mut]
+            self.α[b<self.σ] = 1 - self.α[b<self.σ]
             b = np.random.random(size=self.N)
-            self.follower[b<self.σ_mut] = 1 - self.follower[b<self.σ_mut]
+            self.follower[b<self.σ] = 1 - self.follower[b<self.σ]
             if self.raoult:
                 b = np.random.random(size=self.N)
-                self.anti_conformist[b<self.σ_mut] = 1 - self.anti_conformist[b<self.σ_mut]
+                self.anti_conformist[b<self.σ] = 1 - self.anti_conformist[b<self.σ]
             self.accuracy += self.γ2*(self.D>0) -self.γ2*self.accuracy
-            self.fitness = self.accuracy + self.Ω*in_deg/self.N - self.c*(~self.follower)
+            self.fitness = self.accuracy + self.ω*in_deg/self.N - self.c*(~self.follower)
             self.fitness /= self.fitness.sum()
             for j in range(self.selection_force):
                 self.selection()
