@@ -10,7 +10,7 @@ class CurtyMarsili(object):
     def __init__(self,z=0,z2 = 0,z3=0,a = 1, N=5000, p=0.52, m=11,γ = 0.05,γ2 = .05,σ = 10**-8,α_dandy = 1,n = 100,ω = 1,c = .01,selection_force=2,raoult=True,tqdm=False,T = 100000):
         #z is the initial proportion of followers (idem z2 -> proportion of dandys, z3 -> proportion of anti-conformists)
         self.N = N # Number of players
-        self.ω = ω #Inventive to gather in-degrees
+        self.ω = ω #Incentive to gather in-degrees
         self.p = p #Informed accuracy
         self.T = T #Number of iterations in the imitation phase
         self.tqdm = tqdm # Boolean, wether to use tqdm
